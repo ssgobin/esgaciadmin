@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Diagnóstico de Maturidade Empresarial • Análise</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Firebase (compat) - opcional -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+  <link rel="shortcut icon" type="image/png" href="icons/icon-512.png" />
+  <meta name="theme-color" content="#0b1220">
+
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #0f172a;
+      --surface: #111827;
+      --muted: #9db1d8;
+      --border: #1f2a44;
+      --text: #e6eefc;
+      --text-muted: #b9c7e6;
+      --primary: #3b82f6;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444
+    }
+
+    * { box-sizing: border-box }
+
+    html, body { height: 100% }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Montserrat, system-ui, Segoe UI, Roboto, Arial, sans-serif
+    }
+
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px }
+
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px
+    }
+
+    .title { display: flex; gap: 12px; align-items: center }
+    .title h1 { font-size: 20px; margin: 0; font-weight: 800; letter-spacing: .2px }
+    .title small { color: var(--text-muted) }
+
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap }
+
+    .hidden {
+        display: none;
+    }
+
+    button,
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
+    button.secondary { background: #1f2a44 }
+    button.ghost { background: transparent; border: 1px solid var(--border) }
+    button:disabled { opacity: .6; cursor: not-allowed }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px }
+    .col-12 { grid-column: span 12 }
+    .col-6 { grid-column: span 12 }
+    .col-4 { grid-column: span 12 }
+    @media(min-width:720px){ .col-6 { grid-column: span 6 } .col-4 { grid-column: span 4 } }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap }
+    .right { justify-content: flex-end }
+
+    .hint { color: var(--text-muted); font-size: .9em }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0 12px
+    }
+
+    .section-title h3 { margin: 0; font-size: 16px }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left }
+    tr:hover td { background: #0d1528 }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1f2a44;
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--text-muted)
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .pill {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+    }
+
+    .progress {
+      height: 10px;
+      background: #0b1630;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border)
+    }
+
+    .progress > span {
+      display: block;
+      height: 100%;
+      background: var(--ok)
+    }
+
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px
+    }
+
+    .kpi .box {
+      grid-column: span 12;
+      background: #0d162a;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px
+    }
+
+    .kpi .value { font-size: 24px; font-weight: 800 }
+    @media(min-width:720px){ .kpi .box { grid-column: span 4 } }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.55);
+      z-index: 1000;
+      padding: 20px
+    }
+
+    .modal[hidden] { display: none }
+
+    .modal .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+      width: min(900px, 100%);
+      max-height: 85vh;
+      overflow: auto;
+      padding: 16px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <img src="logoacianexus_wbg.png" alt="Logo" width="100" height="50" />
+        <div>
+          <h1>Diagnóstico de Maturidade • Análise</h1>
+          <small id="subCount">0 respostas</small>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="secondary" id="btnExportXLSX" title="Exportar para Excel">Exportar XLSX</button>
+      </div>
+    </header>
+
+    <!-- RESUMO / DASHBOARD -->
+    <section class="card">
+      <div class="section-title">
+        <h3>Visão geral</h3>
+        <span class="badge">Painel de análise em tempo real</span>
+      </div>
+
+      <div class="kpi" id="kpiArea"></div>
+
+      <div class="grid" id="dashExtra" style="margin-top:12px">
+        <div class="col-6">
+          <div class="card">
+            <div class="section-title"><h3>Resumo de empresas</h3></div>
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <span class="pill">Últimos 30 dias: <strong id="kpiMonth">0</strong></span>
+              <span class="pill">Consentimento: <strong id="kpiConsent">0%</strong></span>
+              <span class="pill">Empresas únicas: <strong id="kpiUnique">0</strong></span>
+              <span class="pill">Média colaboradores: <strong id="kpiEmpAvg">0</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card">
+            <div class="section-title"><h3>Adoção (Sim) por item</h3></div>
+            <div id="listYesNo" class="hint">Sem dados.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid" id="dashCharts" style="margin-top:12px">
+        <div class="col-12">
+          <div class="card">
+            <div class="section-title"><h3>Tendência por dimensão (mensal)</h3></div>
+            <canvas id="chartTrend" height="120"></canvas>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card">
+            <div class="section-title"><h3>Média por setor (Total)</h3></div>
+            <canvas id="chartSector" height="160"></canvas>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card">
+            <div class="section-title"><h3>Distribuição por porte</h3></div>
+            <canvas id="chartSize" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LISTA DE RESPOSTAS -->
+    <section class="card">
+      <div class="section-title">
+        <h3>Respostas detalhadas</h3>
+        <span class="badge">Clique em "Ver" para abrir o diagnóstico completo</span>
+      </div>
+
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+        <input id="filter" type="text" placeholder="Filtrar por empresa, setor, cidade…" style="max-width:320px">
+      </div>
+
+      <div style="overflow:auto;">
+        <table aria-label="Tabela de submissões">
+          <thead id="subsHead"></thead>
+          <tbody id="subsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MODAL DETALHES -->
+    <div id="modal" class="modal" hidden>
+      <div class="panel">
+        <div class="section-title">
+          <h3 id="modalTitle">Detalhes da resposta</h3>
+          <div class="row" style="gap:8px">
+            <button class="ghost" id="btnPrint">Imprimir</button>
+            <button class="secondary" id="modalClose" aria-label="Fechar">Fechar</button>
+          </div>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Firebase (opcional) - MESMA CONFIG DO index.html -->
+  <script>
+    (function(){
+      const firebaseConfig = {
+        apiKey: "",
+        authDomain: "",
+        projectId: "",
+        storageBucket: "",
+        messagingSenderId: "",
+        appId: ""
+      };
+      const hasConfig = !!(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
+      if (!window.firebase || !hasConfig) { window.firebaseApi = null; return; }
+      try {
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.enablePersistence({ synchronizeTabs: true }).catch(()=>{});
+        const TENANT_ID = "default";
+        function coll(){ return db.collection('tenants').doc(TENANT_ID).collection('maturity_responses'); }
+        async function saveRecord(rec){ rec._createdAtServer = firebase.firestore.FieldValue.serverTimestamp(); const ref = await coll().add(rec); return ref.id; }
+        function subscribe(onChange){
+          coll().orderBy('createdAt','desc').onSnapshot(
+            snap=>{
+              const arr=[];
+              snap.forEach(doc=>arr.push({_id:doc.id,...doc.data()}));
+              if (typeof onChange==='function') onChange(arr);
+            },
+            err=>console.warn('Snapshot Firestore falhou:', err?.code||err?.message||err)
+          );
+        }
+        async function deleteRecord(id){ await coll().doc(id).delete(); }
+        async function deleteAll(){
+          const snap=await coll().get();
+          const batch=db.batch();
+          snap.forEach(doc=>batch.delete(doc.ref));
+          await batch.commit();
+        }
+        window.firebaseApi = { saveRecord, subscribe, deleteRecord, deleteAll };
+      } catch(e){ console.error(e); window.firebaseApi = null; }
+    })();
+  </script>
+
+  <script>
+    (function(){
+      'use strict';
+
+      const LS_KEY_DATA   = 'maturity_submissions_v1';
+      const LS_KEY_SCHEMA = 'maturity_schema_v1';
+      const USE_LOCAL     = !window.firebaseApi;
+
+      const SCALE_NAMES = ['Inexistente','Inicial','Em desenvolvimento','Consolidado','Avançado e sustentável'];
+
+      // ======= SCHEMA PADRÃO (mesmo da página de coleta) =======
+      const defaultSchema = {
+        sections: [
+          {
+            key: 'estrategia_governanca',
+            title: '1 – Estratégia e Governança',
+            items: [
+              { id: 'planejamento_estrategico', label: 'Planejamento estratégico formalizado', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'modelo_decisao', label: 'Modelo de decisão (centralizado/colegiado)', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'reunioes_acompanhamento', label: 'Reuniões de acompanhamento com pautas e atas', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'criterios_recursos', label: 'Critérios transparentes para alocação de recursos', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'conselheiros_mentores', label: 'Presença de conselheiros ou mentores externos', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 }
+            ]
+          },
+          {
+            key: 'gestao_processos',
+            title: '2 – Gestão e Processos',
+            items: [
+              { id: 'processos_documentados', label: 'Processos documentados e revisados periodicamente', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'kpis_area', label: 'Métricas de desempenho (KPIs) por área', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'fluxos_aprovacao', label: 'Fluxos de aprovação claros', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'replicabilidade', label: 'Processos replicáveis e não dependentes de pessoas', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'integracao_areas', label: 'Integração entre áreas (marketing, vendas, operação, finanças)', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 }
+            ]
+          },
+          {
+            key: 'financas_sustentabilidade',
+            title: '3 – Finanças e Sustentabilidade',
+            items: [
+              { id: 'orcamento_fluxo', label: 'Orçamento anual e projeção de fluxo de caixa', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'rentabilidade_custos', label: 'Análise periódica de rentabilidade e custos', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'separacao_financas', label: 'Separação entre finanças pessoais e empresariais', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'reserva_reinvestimento', label: 'Reserva financeira e política de reinvestimento', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'mitigacao_riscos', label: 'Mitigação de riscos financeiros, tributários e contratuais', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 }
+            ]
+          },
+          {
+            key: 'pessoas_cultura',
+            title: '4 – Pessoas e Cultura Organizacional',
+            items: [
+              { id: 'cargos_responsabilidades', label: 'Descrição clara de cargos e responsabilidades', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'lideranca_desenvolvimento', label: 'Liderança focada em gestão e desenvolvimento', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'feedback_avaliacao', label: 'Processos de feedback e avaliação de desempenho', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'comunicacao_visao', label: 'Comunicação clara sobre visão e propósito da empresa', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'sucessao_lideres', label: 'Plano de sucessão e capacitação de novos líderes', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 }
+            ]
+          },
+          {
+            key: 'marketing_marca_relacionamento',
+            title: '5 – Marketing, Marca e Relacionamento',
+            items: [
+              { id: 'posicionamento_marca', label: 'Posicionamento e discurso de marca claros', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'planejamento_marketing', label: 'Planejamento de marketing estruturado', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'canais_digitais', label: 'Gestão estratégica dos canais digitais', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'satisfacao_clientes', label: 'Monitoramento da satisfação e lealdade dos clientes (NPS)', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'stakeholders', label: 'Planos de relacionamento com stakeholders', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 }
+            ]
+          },
+          {
+            key: 'inovacao_crescimento_esg',
+            title: '6 – Inovação, Crescimento e ESG',
+            items: [
+              { id: 'cultura_inovacao', label: 'Cultura de inovação e melhoria contínua', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'capacitacao_aprendizado', label: 'Investimento em capacitação e aprendizado organizacional', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'digitalizacao_tecnologia', label: 'Digitalização de processos e uso estratégico da tecnologia', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'etica_transparencia', label: 'Práticas de ética, sustentabilidade e transparência', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 },
+              { id: 'projetos_sociais_ambientais', label: 'Participação em projetos sociais ou ambientais', type: 'scale', min: 1, max: 5, default: 3, score: true, weight: 1 }
+            ]
+          }
+        ]
+      };
+
+      // ======= HELPERS =======
+      const $  = s => document.querySelector(s);
+      const $$ = s => Array.from(document.querySelectorAll(s));
+      const onlyDigits = s => String(s||'').replace(/\D+/g,'');
+      const todayISO = () => new Date().toISOString();
+      const dateBR = iso => { try { return new Date(iso).toLocaleString('pt-BR'); } catch { return iso; } };
+      const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+
+      function loadSchema(){
+        try {
+          const s = JSON.parse(localStorage.getItem(LS_KEY_SCHEMA)||'null');
+          return (s && Array.isArray(s.sections)) ? s : defaultSchema;
+        } catch {
+          return defaultSchema;
+        }
+      }
+
+      function loadData(){
+        if(!USE_LOCAL) return [];
+        try { return JSON.parse(localStorage.getItem(LS_KEY_DATA)||'[]'); }
+        catch { return []; }
+      }
+
+      function saveData(arr){
+        if(!USE_LOCAL) return;
+        localStorage.setItem(LS_KEY_DATA, JSON.stringify(arr));
+      }
+
+      let schema = loadSchema();
+      let DATA   = loadData();
+      let CHARTS = { trend: null, sector: null, size: null };
+
+      function getDimensionKeys(){ return schema.sections.map(s=>s.key); }
+      function getDimensionMap(){ const m={}; schema.sections.forEach(s=>m[s.key]=s.title); return m; }
+
+      function renderSubsTableHead(){
+        const thead = $('#subsHead'); thead.innerHTML='';
+        const tr = document.createElement('tr');
+        const baseCols = ['Data','Empresa','Setor','Porte','Cidade/UF'];
+        baseCols.forEach(h=>{
+          const th=document.createElement('th');
+          th.textContent=h;
+          tr.appendChild(th);
+        });
+        const dimMap = getDimensionMap();
+        Object.values(dimMap).forEach(title=>{
+          const th=document.createElement('th');
+          th.textContent=title;
+          tr.appendChild(th);
+        });
+        const thTot=document.createElement('th'); thTot.textContent='Total'; tr.appendChild(thTot);
+        const thAct=document.createElement('th'); thAct.textContent='Ações'; tr.appendChild(thAct);
+        thead.appendChild(tr);
+      }
+
+      function getData(){ return USE_LOCAL? (DATA||[]) : (window.__REMOTE_DATA__||[]); }
+
+      function renderTable(data){
+        const tbody = $('#subsBody'); tbody.innerHTML='';
+        const q = ($('#filter')?.value||'').toLowerCase();
+        const dimKeys = getDimensionKeys();
+        data.forEach((it, idx)=>{
+          const name=it.company?.name||'';
+          const sector=it.company?.sector||'';
+          const loc=it.company?.location||'';
+          const hay=(name+' '+sector+' '+loc).toLowerCase();
+          if(q && !hay.includes(q)) return;
+
+          const tr=document.createElement('tr');
+          const cells = [ dateBR(it.createdAt || todayISO()), name, sector, (it.company?.size||''), loc ];
+          cells.forEach(val=>{
+            const td=document.createElement('td');
+            td.textContent=val;
+            tr.appendChild(td);
+          });
+
+          dimKeys.forEach(k=>{
+            const td=document.createElement('td');
+            const v=it.scores?.dimensions?.[k];
+            td.textContent=(v!=null? Math.round(v*100)+'%':'-');
+            tr.appendChild(td);
+          });
+
+          const tdTot=document.createElement('td');
+          tdTot.textContent=(it.scores?.total!=null? Math.round(it.scores.total*100)+'%':'-');
+          tr.appendChild(tdTot);
+
+          const tdAct=document.createElement('td');
+          const b1=document.createElement('button'); b1.className='secondary'; b1.dataset.act='view'; b1.dataset.idx=String(idx); b1.textContent='Ver';
+          const b2=document.createElement('button'); b2.className='ghost'; b2.dataset.act='del'; b2.dataset.idx=String(idx); b2.textContent='Del';
+          tdAct.appendChild(b1); tdAct.appendChild(b2);
+          tr.appendChild(tdAct);
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      function openModalByIndex(idx){
+        const rec = getData()[idx]; if(!rec) return;
+        const modal=$('#modal'); const title=$('#modalTitle'); const body=$('#modalBody');
+        title.textContent = rec.company?.name || 'Detalhes da resposta';
+        body.innerHTML='';
+
+        function row(label,value){
+          const tr=document.createElement('tr');
+          const td1=document.createElement('td');
+          td1.textContent=label;
+          td1.style.width='40%';
+          const td2=document.createElement('td');
+          td2.textContent=(value==null||value==='')?'—':String(value);
+          tr.append(td1,td2);
+          return tr;
+        }
+
+        const c=rec.company || {};
+        const card1=document.createElement('div'); card1.className='card';
+        let h=document.createElement('div'); h.className='section-title';
+        const h3=document.createElement('h3'); h3.textContent='Empresa'; h.appendChild(h3); card1.appendChild(h);
+        const t1=document.createElement('table'); const tb1=document.createElement('tbody');
+        tb1.append(row('Data', dateBR(rec.createdAt || todayISO())));
+        tb1.append(row('Razão social', c.name));
+        tb1.append(row('CNPJ', c.cnpj));
+        tb1.append(row('Setor', c.sector));
+        tb1.append(row('Porte', c.size));
+        tb1.append(row('Cidade/UF', c.location));
+        tb1.append(row('Contato', c.contact));
+        tb1.append(row('E-mail', c.email));
+        tb1.append(row('Telefone', c.phone));
+        t1.appendChild(tb1);
+        card1.appendChild(t1);
+        body.appendChild(card1);
+
+        const card2=document.createElement('div'); card2.className='card';
+        h=document.createElement('div'); h.className='section-title';
+        const hs=document.createElement('h3'); hs.textContent='Scores'; h.appendChild(hs); card2.appendChild(h);
+        const chips=document.createElement('div');
+        chips.style.display='flex'; chips.style.flexWrap='wrap'; chips.style.gap='8px';
+        const dimMap=getDimensionMap();
+        Object.entries(dimMap).forEach(([key,title])=>{
+          const span=document.createElement('span');
+          span.className='pill';
+          const val=rec.scores?.dimensions?.[key];
+          span.textContent=`${title}: ${val!=null?Math.round(val*100)+'%':'—'}`;
+          chips.appendChild(span);
+        });
+        const spanT=document.createElement('span');
+        spanT.className='pill';
+        spanT.textContent=`Total: ${rec.scores?.total!=null?Math.round(rec.scores.total*100)+'%':'—'}`;
+        chips.appendChild(spanT);
+        card2.appendChild(chips);
+        body.appendChild(card2);
+
+        // Itens por seção
+        schema.sections.forEach(sec=>{
+          const card=document.createElement('div'); card.className='card';
+          const st=document.createElement('div'); st.className='section-title';
+          const hh=document.createElement('h3'); hh.textContent=sec.title; st.appendChild(hh); card.appendChild(st);
+          const t=document.createElement('table'); const tb=document.createElement('tbody');
+          sec.items.forEach(item=>{
+            const id=`q_${sec.key}_${item.id || slug(item.label)}`;
+            const v=rec.answers ? rec.answers[id] : undefined;
+            const label=item.label;
+            let valText;
+            if(v==null || v===''){
+              valText='—';
+            } else if(item.type==='scale'){
+              const num = Number(v);
+              const escala = SCALE_NAMES[(num||1)-1] || '';
+              valText = `${num} ${escala ? '('+escala+')' : ''}`;
+            } else {
+              valText=String(v);
+            }
+            tb.appendChild(row(label,valText));
+          });
+          t.appendChild(tb);
+          card.appendChild(t);
+          body.appendChild(card);
+        });
+
+        modal.hidden=false;
+      }
+
+      function closeModal(){ $('#modal').hidden=true; }
+
+      function monthKey(d){ const dt=new Date(d); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0'); }
+
+      function refreshCounts(data){
+        $('#subCount').textContent = data.length + (data.length===1?' resposta':' respostas');
+        updateDashboard(data);
+        renderTable(data);
+      }
+
+      function updateCharts(data){
+        const dimKeys = getDimensionKeys();
+        const dimMap=getDimensionMap();
+
+        const byMonth={};
+        data.forEach(r=>{
+          const k=monthKey(r.createdAt || todayISO());
+          byMonth[k]=byMonth[k]||{};
+          dimKeys.forEach(dk=>{
+            (byMonth[k][dk]||(byMonth[k][dk]=[]));
+            const v=r.scores?.dimensions?.[dk];
+            if(v!=null) byMonth[k][dk].push(v*100);
+          });
+        });
+
+        const labels = Object.keys(byMonth).sort();
+        const avg = arr => arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+        const datasets = dimKeys.map(dk=>({
+          label: dimMap[dk],
+          data: labels.map(m=>Math.round(avg(byMonth[m][dk]||[])))
+        }));
+
+        if(CHARTS.trend) CHARTS.trend.destroy();
+        CHARTS.trend = new Chart($('#chartTrend'), {
+          type:'line',
+          data:{ labels, datasets },
+          options:{
+            responsive:true,
+            interaction:{ mode:'index', intersect:false },
+            scales:{ y:{ min:0, max:100, ticks:{ callback:v=>v+'%' } } }
+          }
+        });
+
+        const bySector={};
+        data.forEach(d=>{
+          const k=d.company?.sector||'—';
+          const v=(d.scores?.total!=null)? d.scores.total*100 : null;
+          if(v!=null){
+            (bySector[k]||(bySector[k]=[])).push(v);
+          }
+        });
+        const sLabels=Object.keys(bySector);
+        const sVals=sLabels.map(k=>Math.round(avg(bySector[k])));
+
+        if(CHARTS.sector) CHARTS.sector.destroy();
+        CHARTS.sector = new Chart($('#chartSector'),{
+          type:'bar',
+          data:{ labels:sLabels, datasets:[{ label:'Score médio (Total)', data:sVals }] },
+          options:{
+            responsive:true,
+            plugins:{ legend:{ display:false } },
+            scales:{ y:{ min:0, max:100, ticks:{ callback:v=>v+'%' } } }
+          }
+        });
+
+        const bySize={};
+        data.forEach(d=>{
+          const k=d.company?.size||'—';
+          bySize[k]=(bySize[k]||0)+1;
+        });
+        const zLabels=Object.keys(bySize);
+        const zVals=zLabels.map(k=>bySize[k]);
+
+        if(CHARTS.size) CHARTS.size.destroy();
+        CHARTS.size = new Chart($('#chartSize'),{
+          type:'doughnut',
+          data:{ labels:zLabels, datasets:[{ data:zVals }] },
+          options:{ responsive:true }
+        });
+      }
+
+      function updateQuality(data){
+        const n=data.length;
+        const digits=s=>String(s||'').replace(/\D+/g,'');
+        const reMail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        let okMail=0, okCNPJ=0, okPhone=0, okLoc=0, okEmp=0, okConsent=0, complete=0;
+        const issues={ email:0, cnpj:0, phone:0, loc:0, emp:0, consent:0 };
+
+        data.forEach(d=>{
+          const mail = reMail.test(d.company?.email||'');
+          if(mail) okMail++; else issues.email++;
+
+          const cnpj = digits(d.company?.cnpj).length===14;
+          if(cnpj) okCNPJ++; else issues.cnpj++;
+
+          const phoneLen=digits(d.company?.phone).length;
+          const phone=(phoneLen===10||phoneLen===11);
+          if(phone) okPhone++; else issues.phone++;
+
+          const loc = !!(d.company?.location && d.company.location.includes('/'));
+          if(loc) okLoc++; else issues.loc++;
+
+          const emp = typeof d.company?.employees==='number' && d.company.employees>=0;
+          if(emp) okEmp++; else issues.emp++;
+
+          const cons=!!d.consent;
+          if(cons) okConsent++; else issues.consent++;
+
+          if(mail && cnpj && phone && loc && emp && cons) complete++;
+        });
+
+        const pct=x=> n? Math.round(100*x/n) : 0;
+
+        $('#qReg').textContent=n;
+        $('#qComplete').textContent=pct(complete)+'%';
+        $('#qConsent').textContent=pct(okConsent)+'%';
+
+        $('#qPctEmail').textContent=pct(okMail)+'%';
+        $('#qBarEmail').style.width=pct(okMail)+'%';
+
+        $('#qPctCNPJ').textContent=pct(okCNPJ)+'%';
+        $('#qBarCNPJ').style.width=pct(okCNPJ)+'%';
+
+        $('#qPctPhone').textContent=pct(okPhone)+'%';
+        $('#qBarPhone').style.width=pct(okPhone)+'%';
+
+        $('#qPctLoc').textContent=pct(okLoc)+'%';
+        $('#qBarLoc').style.width=pct(okLoc)+'%';
+
+        $('#qPctEmp').textContent=pct(okEmp)+'%';
+        $('#qBarEmp').style.width=pct(okEmp)+'%';
+
+        const entries=Object.entries(issues).filter(([k,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        const wrap=$('#qIssues');
+        wrap.innerHTML = entries.length
+          ? ('<ul>'+entries.map(([k,v])=>`<li>${k.toUpperCase()}: ${v}</li>`).join('')+'</ul>')
+          : 'Sem problemas.';
+      }
+
+      function updateYesNoList(data){
+        const defs=[];
+        schema.sections.forEach(sec=>{
+          sec.items.forEach(item=>{
+            if(item.type==='yesno'){
+              const id=`q_${sec.key}_${item.id || slug(item.label)}`;
+              defs.push({ id, label:item.label, section:sec.title });
+            }
+          });
+        });
+        const stats=defs.map(def=>{
+          let base=0, yes=0;
+          data.forEach(d=>{
+            const v=d.answers? d.answers[def.id] : undefined;
+            if(v!==undefined && v!==null && v!==''){
+              base++;
+              if(v==='Sim') yes++;
+            }
+          });
+          const pct=base? Math.round(100*yes/base):null;
+          return { ...def, base, yes, pct };
+        }).filter(r=>r.pct!==null).sort((a,b)=> b.pct-a.pct || b.yes-a.yes).slice(0,6);
+
+        const div=$('#listYesNo');
+        div.innerHTML = stats.length
+          ? ('<ul>'+stats.map(r=>`<li>${r.label} — ${r.pct}% (${r.yes}/${r.base})</li>`).join('')+'</ul>')
+          : 'Sem dados.';
+      }
+
+      function updateDashboard(data){
+        const area=$('#kpiArea');
+        area.innerHTML='';
+
+        const boxTotal=document.createElement('div');
+        boxTotal.className='box';
+        boxTotal.innerHTML = `<div class="hint">Respostas totais</div><div class="value" id="kpiCount">${data.length}</div>`;
+        area.appendChild(boxTotal);
+
+        const dimKeys=getDimensionKeys();
+        const dimMap=getDimensionMap();
+        const valid=data.filter(d=>d.scores && d.scores.total!=null);
+        const avgDim = k => valid.length
+          ? (valid.reduce((a,b)=>a+(b.scores.dimensions[k]||0),0)/valid.length)
+          : 0;
+
+        dimKeys.forEach(k=>{
+          const v = Math.round(avgDim(k)*100);
+          const box=document.createElement('div');
+          box.className='box';
+          box.innerHTML = `<div class="hint">${dimMap[k]}</div><div class="value">${v}%</div><div class="progress"><span style="width:${v}%"></span></div>`;
+          area.appendChild(box);
+        });
+
+        const tAvg = valid.length
+          ? Math.round(valid.reduce((a,b)=>a+(b.scores.total||0),0)/valid.length*100)
+          : 0;
+        const boxT=document.createElement('div');
+        boxT.className='box';
+        boxT.innerHTML = `<div class="hint">Score Total Médio</div><div class="value">${tAvg}%</div><div class="progress"><span style="width:${tAvg}%"></span></div>`;
+        area.appendChild(boxT);
+
+        const monthAgo=new Date();
+        monthAgo.setDate(monthAgo.getDate()-30);
+        const monthCount=data.filter(d=>new Date(d.createdAt || todayISO())>=monthAgo).length;
+        const consentCount=data.filter(d=>d.consent).length;
+        const consentPct=data.length? Math.round(100*consentCount/data.length):0;
+        const uniqKey=d=> (String(d.company?.cnpj||'').trim().toLowerCase()) || (String(d.company?.name||'').trim().toLowerCase());
+        const uniq=new Set(data.map(uniqKey).filter(Boolean));
+        const employeesArr=data.map(d=>d.company?.employees).filter(v=>typeof v==='number'&&!isNaN(v));
+        const empAvg=employeesArr.length? Math.round(employeesArr.reduce((a,b)=>a+b,0)/employeesArr.length):0;
+        $('#kpiMonth').textContent=monthCount;
+        $('#kpiConsent').textContent=consentPct+'%';
+        $('#kpiUnique').textContent=uniq.size;
+        $('#kpiEmpAvg').textContent=empAvg;
+
+        updateYesNoList(data);
+        updateCharts(data);
+        updateQuality(data);
+      }
+
+      function unionHeaders(rows){ return Array.from(new Set(rows.flatMap(r=>Object.keys(r)))).sort(); }
+
+      function flattenForExport(rec){
+        const flat = {
+          data: new Date(rec.createdAt || todayISO()),
+          empresa: rec.company?.name||'',
+          cnpj: rec.company?.cnpj||'',
+          setor: rec.company?.sector||'',
+          porte: rec.company?.size||'',
+          cidadeUF: rec.company?.location||'',
+          contato: rec.company?.contact||'',
+          email: rec.company?.email||'',
+          telefone: rec.company?.phone||'',
+          colaboradores: rec.company?.employees??''
+        };
+        const dimMap=getDimensionMap();
+        Object.keys(dimMap).forEach(k=>{
+          flat['score_'+k] = rec.scores?.dimensions?.[k]!=null
+            ? Math.round(rec.scores.dimensions[k]*100)
+            : null;
+        });
+        flat['score_total'] = rec.scores?.total!=null
+          ? Math.round(rec.scores.total*100)
+          : null;
+        for(const k in rec.answers){
+          flat[k]=rec.answers[k];
+        }
+        return flat;
+      }
+
+      function exportXLSX(){
+        const data = getData();
+        const wb=XLSX.utils.book_new();
+        const rows = data.map(flattenForExport);
+        const baseOrder=['data','empresa','cnpj','setor','porte','cidadeUF','contato','email','telefone','colaboradores'];
+        const dimKeys=getDimensionKeys();
+        const scoreOrder = dimKeys.map(k=>'score_'+k).concat(['score_total']);
+        const headers = Array.from(new Set([...baseOrder, ...scoreOrder, ...unionHeaders(rows)]));
+
+        const aoa = [ headers.map(h=>{
+          const dimMap=getDimensionMap();
+          if(h.startsWith('score_')){
+            const dk=h.replace('score_','');
+            if(dk==='total') return 'Score Total';
+            return (dimMap[dk]||dk)+' (Score)';
+          }
+          const labelBase={
+            data:'Data',
+            empresa:'Empresa',
+            cnpj:'CNPJ',
+            setor:'Setor',
+            porte:'Porte',
+            cidadeUF:'Cidade/UF',
+            contato:'Contato',
+            email:'E-mail',
+            telefone:'Telefone',
+            colaboradores:'Colaboradores'
+          };
+          return labelBase[h] || h;
+        })];
+
+        rows.forEach(r=>{
+          aoa.push(headers.map(h=> r[h]==null? '' : r[h] ));
+        });
+
+        const ws=XLSX.utils.aoa_to_sheet(aoa);
+        for(let i=1;i<aoa.length;i++){
+          const cell=XLSX.utils.encode_cell({ r:i, c:0 });
+          if(ws[cell]) ws[cell].z='dd/mm/yyyy hh:mm';
+        }
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Respostas');
+        XLSX.writeFile(wb, 'diagnostico_maturidade_analise.xlsx');
+      }
+
+      function subscribeRemote(){
+        if(!window.firebaseApi) return;
+        window.firebaseApi.subscribe(arr=>{
+          window.__REMOTE_DATA__=arr;
+          refreshCounts(getData());
+        });
+      }
+
+      function bindEvents(){
+        $('#filter').addEventListener('input', ()=> renderTable(getData()));
+        document.addEventListener('click', async (ev)=>{
+          const t=ev.target;
+          if(!(t instanceof HTMLElement)) return;
+          if(t.dataset.act==='view'){ openModalByIndex(Number(t.dataset.idx)); }
+          if(t.dataset.act==='del'){
+            if(!confirm('Apagar este registro?')) return;
+            const idx=Number(t.dataset.idx);
+            const arr=getData();
+            const rec=arr[idx];
+            if(USE_LOCAL){
+              arr.splice(idx,1);
+              DATA=arr;
+              saveData(arr);
+            } else {
+              try { await window.firebaseApi.deleteRecord(rec._id); }
+              catch(e){ console.warn('Falha apagar remoto', e); }
+            }
+            refreshCounts(getData());
+          }
+          if(t.id==='modalClose'){ closeModal(); }
+          if(t.id==='btnPrint'){ window.print(); }
+        });
+        $('#btnExportXLSX').addEventListener('click', exportXLSX);
+      }
+
+      function init(){
+        renderSubsTableHead();
+        bindEvents();
+        subscribeRemote();
+        refreshCounts(getData());
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
